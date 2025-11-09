@@ -20,6 +20,22 @@ enum PaymentType {
   MIXED
 }
 
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  RECEIVED
+  CANCELLED
+}
+
+enum JournalEntryType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
 model User {
   id              String               @id @default(uuid())
   email           String               @unique
@@ -28,8 +44,30 @@ model User {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   sales           SalesTransaction[]
-  // Note: User no longer directly manages inventory items
-  // This will be managed through branches/locations instead
+  branchUsers     BranchUser[]
+}
+
+model Branch {
+  id          String               @id @default(uuid())
+  name        String
+  address     String?
+  phone       String?
+  email       String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  inventoryItems BranchInventory[]
+  sales       SalesTransaction[]
+  users       BranchUser[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model BranchUser {
+  id          String               @id @default(uuid())
+  user        User                 @relation(fields: [userId], references: [id])
+  userId      String
+  branch      Branch               @relation(fields: [branchId], references: [id])
+  branchId    String
+  createdAt   DateTime             @default(now())
 }
 
 model Product {
@@ -41,6 +79,7 @@ model Product {
   costPrice       Float
   category        String
   inventories     InventoryItem[]
+  branchInventories BranchInventory[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 }
@@ -56,12 +95,89 @@ model InventoryItem {
   updatedAt   DateTime             @updatedAt
 }
 
+model BranchInventory {
+  id          String               @id @default(uuid())
+  product     Product              @relation(fields: [productId], references: [id])
+  productId   String
+  branch      Branch               @relation(fields: [branchId], references: [id])
+  branchId    String
+  quantity    Int                  @default(0)
+  lowStockAt  Int                  @default(10)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
 model SalesTransaction {
   id          String               @id @default(uuid())
   user        User                 @relation(fields: [userId], references: [id])
   userId      String
+  branch      Branch               @relation(fields: [branchId], references: [id])
+  branchId    String
   products    Json                 // Array of { productId, quantity, price }
   totalAmount Float
   paymentType PaymentType
+  createdAt   DateTime             @default(now())
+}
+
+model Supplier {
+  id          String               @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id          String               @id @default(uuid())
+  supplier    Supplier             @relation(fields: [supplierId], references: [id])
+  supplierId  String
+  branch      Branch               @relation(fields: [branchId], references: [id])
+  branchId    String
+  status      PurchaseOrderStatus  @default(DRAFT)
+  totalAmount Float
+  items       Json                 // Array of { productId, quantity, unitPrice }
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model ChartOfAccount {
+  id          String               @id @default(uuid())
+  code        String               @unique
+  name        String
+  type        JournalEntryType
+  parentId    String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  journalEntries JournalEntry[]
+  journalEntryLines JournalEntryLine[]
+}
+
+model JournalEntry {
+  id          String               @id @default(uuid())
+  entryNumber String               @unique
+  date        DateTime
+  description String?
+  reference   String?
+  totalDebits Float                @default(0)
+  totalCredits Float               @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  account     ChartOfAccount       @relation(fields: [accountId], references: [id])
+  accountId   String
+  lines       JournalEntryLine[]
+}
+
+model JournalEntryLine {
+  id          String               @id @default(uuid())
+  journalEntry JournalEntry        @relation(fields: [journalEntryId], references: [id])
+  journalEntryId String
+  account     ChartOfAccount       @relation(fields: [accountId], references: [id])
+  accountId   String
+  description String?
+  debit       Float                @default(0)
+  credit      Float                @default(0)
   createdAt   DateTime             @default(now())
 }
