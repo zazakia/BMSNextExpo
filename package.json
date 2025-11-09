@@ -1,0 +1,33 @@
+{
+  "name": "bms-next-expo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.6.0"
+  },
+  "turbo": {
+    "pipeline": {
+      "build": {
+        "outputs": [
+          ".next/**",
+          "dist/**"
+        ]
+      },
+      "lint": {
+        "outputs": []
+      }
+    }
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0"
+  }
+}
